@@ -33,11 +33,22 @@ jobs:
 
       - name: Overlay mod sources onto template
         run: |
+          echo "Files in your repo:"
+          find mod -type f -not -path '*/.git/*' | sort
+          # find the folder holding the mod's Java files, wherever it is in the repo
+          SRC=$(find mod -name FlipperMod.java -not -path '*/.git/*' | head -1)
+          if [ -z "$SRC" ]; then
+            echo "ERROR: FlipperMod.java was not found anywhere in the repo (see file list above)."
+            exit 1
+          fi
+          SRCDIR=$(dirname "$SRC")
+          echo "Using sources from: $SRCDIR"
+          ls "$SRCDIR"
           # use the client source set if the template splits client/main
           if [ -d template/src/client ]; then DEST=template/src/client/java; else DEST=template/src/main/java; fi
           rm -rf template/src/main/java template/src/client
-          mkdir -p "$DEST" template/src/main/java template/src/main/resources
-          cp -r mod/src/main/java/dev "$DEST"/
+          mkdir -p "$DEST/dev/flipper" template/src/main/java template/src/main/resources
+          cp "$SRCDIR"/*.java "$DEST/dev/flipper/"
           # replace the template's metadata; drop its mixin configs
           rm -f template/src/main/resources/*.mixins.json
           cat > template/src/main/resources/fabric.mod.json <<'EOF'
