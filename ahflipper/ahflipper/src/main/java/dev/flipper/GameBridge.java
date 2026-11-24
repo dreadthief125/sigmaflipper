@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -21,14 +21,16 @@ public final class GameBridge {
     static final Pattern PURSE = Pattern.compile("(?:Purse|Piggy): ([\\d,]+)");
     static final Pattern COINS = Pattern.compile("([\\d,]+) coins");
     static Minecraft mc() { return Minecraft.getInstance(); }
+    /** 26.2 moved the open-screen field from Minecraft to Gui. */
+    public static net.minecraft.client.gui.screens.Screen screen() { return mc().gui.screen(); }
 
     public static void say(String s) {
         var m = mc();
-        m.execute(() -> { if (m.player != null) m.player.displayClientMessage(Component.literal("§b[Flipper] §r" + s), false); });
+        m.execute(() -> { if (m.player != null) m.player.sendSystemMessage(Component.literal("§b[Flipper] §r" + s)); });
     }
     public static void cmd(String c) { mc().getConnection().sendCommand(c); }   // no leading slash
-    public static String title() { return mc().screen instanceof AbstractContainerScreen<?> s ? s.getTitle().getString() : ""; }
-    public static void closeScreen() { var m = mc(); if (m.player != null && m.screen != null) m.player.closeContainer(); }
+    public static String title() { return screen() instanceof AbstractContainerScreen<?> s ? s.getTitle().getString() : ""; }
+    public static void closeScreen() { var m = mc(); if (m.player != null && screen() != null) m.player.closeContainer(); }
 
     public static long purse() {
         try {
@@ -45,7 +47,7 @@ public final class GameBridge {
 
     static Slot find(String name, boolean inventory) {
         var m = mc();
-        if (!(m.screen instanceof AbstractContainerScreen<?> s)) return null;
+        if (!(screen() instanceof AbstractContainerScreen<?> s)) return null;
         for (Slot sl : s.getMenu().slots) {
             if ((sl.container == m.player.getInventory()) != inventory) continue;
             ItemStack st = sl.getItem();
@@ -55,8 +57,8 @@ public final class GameBridge {
     }
     static void click(Slot sl) {
         var m = mc();
-        var menu = ((AbstractContainerScreen<?>) m.screen).getMenu();
-        m.gameMode.handleInventoryMouseClick(menu.containerId, sl.index, 0, ClickType.PICKUP, m.player);
+        var menu = ((AbstractContainerScreen<?>) screen()).getMenu();
+        m.gameMode.handleContainerInput(menu.containerId, sl.index, 0, ContainerInput.PICKUP, m.player);
     }
     public static boolean clickByName(String name) { var s = find(name, false); if (s == null) return false; click(s); return true; }
     public static boolean clickInventoryItem(String name) { var s = find(name, true); if (s == null) return false; click(s); return true; }
@@ -81,7 +83,7 @@ public final class GameBridge {
 
     /** Fills the first line of an open sign editor and closes it (which sends the sign packet). */
     public static boolean fillSign(String text) {
-        if (!(mc().screen instanceof AbstractSignEditScreen ss)) return false;
+        if (!(screen() instanceof AbstractSignEditScreen ss)) return false;
         try {
             for (Class<?> c = ss.getClass(); c != null; c = c.getSuperclass())
                 for (Field f : c.getDeclaredFields())
