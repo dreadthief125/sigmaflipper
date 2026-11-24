@@ -31,7 +31,7 @@ public class FlipperMod implements ClientModInitializer {
             bot.tick(cfg);
             if (bot.busy()) return;
             if (cooldown > 0) { cooldown--; return; }
-            if (!cfg.autoExecute || mc.screen != null) return;
+            if (!cfg.autoExecute || mc.gui.screen() != null) return;
             pickNext();
         });
         ClientReceiveMessageEvents.GAME.register((m, overlay) -> {
